@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 
 import { PedidoCreateContainerComponent } from './pedido-create-container.component';
@@ -37,6 +39,8 @@ describe('PedidoCreateContainerComponent', () => {
     await TestBed.configureTestingModule({
       imports: [PedidoCreateContainerComponent, RouterTestingModule],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: PedidoService, useValue: pedidoService },
         { provide: FeedbackService, useValue: feedbackService }
       ]
