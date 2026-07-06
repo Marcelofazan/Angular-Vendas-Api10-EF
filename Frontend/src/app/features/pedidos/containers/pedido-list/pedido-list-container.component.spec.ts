@@ -32,6 +32,9 @@ describe('PedidoListContainerComponent', () => {
     pedidoService = jasmine.createSpyObj('PedidoService', ['listPedidos']);
     feedbackService = jasmine.createSpyObj('FeedbackService', ['error', 'success', 'info', 'clear']);
 
+    // Mock padrão padrão de sucesso para evitar quebras no OnInit dos testes
+    pedidoService.listPedidos.and.returnValue(of(pagedResult));
+
     await TestBed.configureTestingModule({
       imports: [PedidoListContainerComponent, RouterTestingModule],
       providers: [
@@ -42,8 +45,6 @@ describe('PedidoListContainerComponent', () => {
   });
 
   it('should load pedidos on init', () => {
-    pedidoService.listPedidos.and.returnValue(of(pagedResult));
-
     const fixture = TestBed.createComponent(PedidoListContainerComponent);
     const component = fixture.componentInstance;
 
@@ -55,8 +56,6 @@ describe('PedidoListContainerComponent', () => {
   });
 
   it('should navigate to pedido detail when viewPedido is called', async () => {
-    pedidoService.listPedidos.and.returnValue(of(pagedResult));
-
     const fixture = TestBed.createComponent(PedidoListContainerComponent);
     const component = fixture.componentInstance;
     const router = TestBed.inject(Router);
@@ -70,6 +69,7 @@ describe('PedidoListContainerComponent', () => {
   });
 
   it('should show feedback when loading fails', () => {
+    // Altera o comportamento padrão apenas para este teste de falha
     const error = new Error('Falha ao carregar pedidos.');
     pedidoService.listPedidos.and.returnValue(throwError(() => error));
 
