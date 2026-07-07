@@ -22,7 +22,7 @@ $repoRoot = Split-Path -Parent $scriptPath
 
 if (-not $SkipBackendTests) {
     Invoke-Step -Message "dotnet test (Backend)" -Action {
-        dotnet test "$repoRoot\Backend\exemploAPIVendas.sln" --nologo
+        dotnet test "$repoRoot\Backend\exemploAPIVendas.slnx" --nologo
     }
 }
 
