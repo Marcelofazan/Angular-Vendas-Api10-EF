@@ -1,0 +1,57 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Paths and versions
+  buildConfiguration: 'Release'
+  angularProjectDir: '$(System.DefaultWorkingDirectory)/ClientApp' # Adjust to your Angular folder
+  netProjectDir: '$(System.DefaultWorkingDirectory)/Api'          # Adjust to your .NET folder
+  dotnetVersion: '10.0.x'                                      # Matches .NET 10 requirements
+
+stages:
+- stage: Build_Angular
+  displayName: 'Build Angular Application'
+  jobs:
+  - job: BuildClient
+    displayName: 'npm install and build'
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '20.x' # Use a Node version compatible with Angular 17+
+      displayName: 'Install Node.js'
+
+    - script: |
+        cd $(angularProjectDir)
+        npm ci
+        npm run build -- --configuration production
+      displayName: 'Angular 17 Build'
+
+    - publish: $(angularProjectDir)/dist/browser # For Angular 17+, output typically goes here
+      artifact: 'angular-dist'
+      displayName: 'Publish Angular Artifacts'
+
+- stage: Build_DotNet
+  displayName: 'Build and Publish .NET API'
+  jobs:
+  - job: BuildAPI
+    displayName: 'dotnet build and publish'
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        version: '$(dotnetVersion)'
+        packageType: 'sdk'
+      displayName: 'Install .NET SDK'
+
+    - script: |
+        cd $(netProjectDir)
+        dotnet restore
+        dotnet build --configuration $(buildConfiguration)
+        dotnet publish --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/ApiPublish
+      displayName: '.NET 10 Build and Publish'
+
+    - publish: $(Build.ArtifactStagingDirectory)/ApiPublish
+      artifact: 'dotnet-api'
+      displayName: 'Publish .NET Artifacts'
