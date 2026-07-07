@@ -41,7 +41,6 @@ steps:
 
 # ================= PIPELINE DO BACKEND (.NET 10) =================
 - script: |
-    # Busca o caminho absoluto e garante que não falhe
     NET_PATH=$(find "$(Build.SourcesDirectory)/Backend" -name "*.sln" -o -name "*.csproj" -exec dirname {} \; | head -n 1)
     if [ -z "$NET_PATH" ]; then NET_PATH="$(Build.SourcesDirectory)/Backend"; fi
     echo "Diretório .NET detectado: $NET_PATH"
@@ -61,20 +60,22 @@ steps:
   displayName: 'Backend: Executar testes'
   condition: always()
 
-- script: dotnet publish --configuration $(buildConfiguration) --output "$(Build.ArtifactStagingDirectory)/ApiPublish" --no-build
+# CORREÇÃO BACKEND: Removido o --no-build para garantir que TODOS os arquivos associados, configs e assets sejam gerados no output
+- script: dotnet publish --configuration $(buildConfiguration) --output "$(Build.ArtifactStagingDirectory)/ApiPublish"
   workingDirectory: $(detectedNetDir)
   displayName: 'Backend: Publicar para Deploy'
 
 # ================= SALVAR ARTEFATOS PARA DEPLOY =================
+# CORREÇÃO FRONTEND: Garantimos que o artefato seja a pasta raiz 'dist/NomeDoProjeto' inteira, e não apenas onde o index.html reside isoladamente
 - script: |
-    # Mapeia de forma absoluta onde o Angular gerou o index.html
-    DIST_TARGET=$(find "$(Build.SourcesDirectory)/Frontend/dist" -name "index.html" -exec dirname {} \; | head -n 1)
-    if [ -z "$DIST_TARGET" ]; then DIST_TARGET="$(Build.SourcesDirectory)/Frontend/dist"; fi
-    echo "Diretório Angular Dist detectado: $DIST_TARGET"
-    echo "##vso[task.setvariable variable=detectedAngularDist]$DIST_TARGET"
-  displayName: 'Mapear Saída do Angular'
+    DIST_ROOT="$(Build.SourcesDirectory)/Frontend/dist"
+    # Procura a primeira subpasta real dentro de dist que contenha arquivos compilados
+    PROJECT_DIST=$(find "$DIST_ROOT" -mindepth 1 -maxdepth 2 -type d | head -n 1)
+    if [ -z "$PROJECT_DIST" ]; then PROJECT_DIST="$DIST_ROOT"; fi
+    echo "Diretório Completo de Dist do Angular detectado: $PROJECT_DIST"
+    echo "##vso[task.setvariable variable=detectedAngularDist]$PROJECT_DIST"
+  displayName: 'Mapear Pasta Raiz do Angular'
 
-# CORREÇÃO: Chamada da variável corrigida para o formato de runtime do Pipeline
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(detectedAngularDist)'
