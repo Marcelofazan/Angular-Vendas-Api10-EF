@@ -6,9 +6,6 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  # Ajustado para os nomes exatos das suas pastas
-  angularProjectDir: '$(System.DefaultWorkingDirectory)/Frontend'
-  netProjectDir: '$(System.DefaultWorkingDirectory)/Backend'
   dotnetVersion: '10.0.x'
 
 stages:
@@ -24,9 +21,21 @@ stages:
       displayName: 'Install Node.js'
 
     - script: |
-        cd $(angularProjectDir)
+        # Busca automaticamente a pasta que contém o arquivo angular.json
+        ANGULAR_PATH=$(find . -name "angular.json" -exec dirname {} \;)
         
-        # Evita a quebra do pipeline se o package-lock.json não foi enviado ao Git
+        if [ -z "$ANGULAR_PATH" ]; then
+          echo "ERRO: O arquivo angular.json não foi encontrado em nenhuma pasta do repositório!"
+          echo "Arquivos na raiz para verificação:"
+          ls -la
+          exit 1
+        fi
+        
+        echo "##vso[task.setvariable variable=detectedAngularDir]$ANGULAR_PATH"
+        echo "Projeto Angular localizado em: $ANGULAR_PATH"
+        
+        cd "$ANGULAR_PATH"
+        
         if [ -f package-lock.json ]; then
           npm ci
         else
@@ -34,9 +43,9 @@ stages:
         fi
         
         npm run build -- --configuration production
-      displayName: 'Angular 17 Build'
+      displayName: 'Angular 17 Build (Auto-Detect)'
 
-    - publish: $(angularProjectDir)/dist/browser
+    - publish: $(detectedAngularDir)/dist/browser
       artifact: 'angular-dist'
       displayName: 'Publish Angular Artifacts'
 
@@ -53,11 +62,21 @@ stages:
       displayName: 'Install .NET SDK'
 
     - script: |
-        cd $(netProjectDir)
+        # Busca automaticamente a pasta que contém o arquivo de solução (.sln) ou projeto (.csproj)
+        NET_PATH=$(find . -name "*.sln" -o -name "*.csproj" -exec dirname {} \; | head -n 1)
+        
+        if [ -z "$NET_PATH" ]; then
+          echo "ERRO: Nenhum arquivo .sln ou .csproj foi encontrado no repositório!"
+          exit 1
+        fi
+        
+        echo "Projeto .NET localizado em: $NET_PATH"
+        cd "$NET_PATH"
+        
         dotnet restore
         dotnet build --configuration $(buildConfiguration)
         dotnet publish --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/ApiPublish
-      displayName: '.NET 10 Build and Publish'
+      displayName: '.NET 10 Build and Publish (Auto-Detect)'
 
     - publish: $(Build.ArtifactStagingDirectory)/ApiPublish
       artifact: 'dotnet-api'
